@@ -1,0 +1,115 @@
+name: Personal Codex
+
+on:
+  push:
+    branches: [personal]
+    tags: ['personal-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: personal-codex-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
+
+jobs:
+  build:
+    if: github.repository != 'openai/codex'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    env:
+      TARGET: x86_64-unknown-linux-musl
+      CARGO_BUILD_JOBS: '2'
+      CARGO_INCREMENTAL: '0'
+      CARGO_NET_GIT_FETCH_WITH_CLI: 'true'
+      # Fit optimized builds on standard hosted runners without release LTO's memory cost.
+      CARGO_PROFILE_RELEASE_LTO: 'false'
+      CARGO_PROFILE_RELEASE_DEBUG: '0'
+      CARGO_PROFILE_RELEASE_CODEGEN_UNITS: '16'
+      AWS_LC_SYS_NO_JITTER_ENTROPY: '1'
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Read pinned Rust version
+        id: rust
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import tomllib
+          from pathlib import Path
+          toolchain = tomllib.loads(Path('codex-rs/rust-toolchain.toml').read_text())
+          print('version=' + toolchain['toolchain']['channel'])
+          PY
+      - uses: dtolnay/rust-toolchain@e081816240890017053eacbb1bdf337761dc5582
+        with:
+          toolchain: ${{ steps.rust.outputs.version }}
+          targets: ${{ env.TARGET }}
+          components: rustfmt
+      - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        with:
+          version: 0.14.0
+          use-cache: false
+      - name: Install native build dependencies
+        run: bash .github/scripts/install-musl-build-tools.sh
+      - name: Download and verify pinned V8 artifacts
+        uses: ./.github/actions/setup-rusty-v8
+        with:
+          target: ${{ env.TARGET }}
+      - name: Cache Cargo downloads
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: personal-cargo-${{ runner.os }}-${{ hashFiles('codex-rs/Cargo.lock') }}
+          restore-keys: personal-cargo-${{ runner.os }}-
+      - name: Check patch formatting
+        working-directory: codex-rs
+        run: rustfmt --edition 2024 --check tui/src/style.rs tui/src/history_cell/messages.rs tui/src/history_cell/messages_tests.rs
+      - name: Build, test, and package
+        run: bash scripts/personal-codex/build-release.sh
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: personal-codex-${{ env.TARGET }}
+          path: dist/personal/*
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/personal-v')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: personal-codex-*
+          merge-multiple: true
+          path: dist
+      - name: Publish downloadable release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          BUILD_COMMIT: ${{ github.sha }}
+        run: |
+          cat > release-notes.txt <<EOF
+          Personal Codex with light-blue user messages and light-gray assistant messages.
+
+          Source commit: ${BUILD_COMMIT}
+          Platform: Linux x86_64 (musl).
+          Includes the CLI, code-mode host, bubblewrap, and ripgrep.
+          Voice runtime is not bundled.
+
+          Download the archive, install.sh, and SHA256SUMS, then run sha256sum --check SHA256SUMS.
+          Extract the whole archive and keep its directories together.
+          Run bin/codex from the extracted package, or run bash install.sh /path/to/extracted-package.
+          EOF
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" dist/* --clobber
+          else
+            gh release create "$RELEASE_TAG" dist/* --verify-tag \
+              --title "Personal Codex ${RELEASE_TAG}" --notes-file release-notes.txt
+          fi
