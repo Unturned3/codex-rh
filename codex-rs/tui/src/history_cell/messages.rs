@@ -10,6 +10,7 @@ use crate::terminal_hyperlinks::lines_with_sources_eq;
 use crate::terminal_hyperlinks::remap_source_wrapped_line;
 use crate::wrapping::url_preserving_wrap_options;
 use crate::wrapping::word_wrap_line_with_source;
+use ratatui::style::Color;
 use std::borrow::Cow;
 
 #[derive(Debug)]
@@ -245,7 +246,7 @@ impl HistoryCell for UserHistoryCell {
             source.right_reserve = 1;
             source.copy_as_prose = true;
         }
-        lines
+        style_message_lines(lines, style)
     }
 
     fn transcript_hyperlink_lines(&self, width: u16) -> Vec<HyperlinkLine> {
@@ -469,7 +470,7 @@ impl HistoryCell for AgentMessageCell {
                     .subsequent_indent(subsequent_indent),
             ));
         }
-        wrapped
+        style_assistant_message_lines(wrapped)
     }
 
     fn transcript_hyperlink_lines(&self, width: u16) -> Vec<HyperlinkLine> {
@@ -579,6 +580,37 @@ fn normalize_whitespace_only_hyperlink_lines(mut lines: Vec<HyperlinkLine>) -> V
     lines
 }
 
+/// Paint every physical row, including gutters, without losing Markdown span formatting.
+fn style_assistant_message_lines(lines: Vec<HyperlinkLine>) -> Vec<HyperlinkLine> {
+    style_message_lines(lines, crate::style::assistant_message_style())
+}
+
+fn style_message_lines(mut lines: Vec<HyperlinkLine>, surface: Style) -> Vec<HyperlinkLine> {
+    let Some(background) = surface.bg else {
+        return lines;
+    };
+    for line in &mut lines {
+        for span in &mut line.line.spans {
+            let foreground = span.style.fg.or(line.line.style.fg);
+            span.style.fg = match foreground {
+                None | Some(Color::Reset) => surface.fg,
+                Some(color) => Some(crate::style::readable_color_on(color, Some(background))),
+            };
+            span.style.bg = Some(background);
+        }
+        // Scrollback merges line styles over span styles, so keep the foreground on spans.
+        line.line.style.fg = None;
+        line.line.style.bg = Some(background);
+        if let Some(source) = &mut line.source {
+            // Reflow can restore whitespace omitted by wrapping from this retained source.
+            source.line_style = source.line_style.patch(surface);
+            source.span_style.bg = Some(background);
+            source.continuation_indent.style = source.continuation_indent.style.patch(surface);
+        }
+    }
+    lines
+}
+
 impl AgentMarkdownCell {
     fn render_lines(
         &self,
@@ -619,11 +651,12 @@ impl AgentMarkdownCell {
             ))
         };
 
-        if let Some(rendered_lines) = &self.rendered_lines {
+        let lines = if let Some(rendered_lines) = &self.rendered_lines {
             rendered_lines.render(width, list_spacing, render)
         } else {
             render()
-        }
+        };
+        style_assistant_message_lines(lines)
     }
 }
 
@@ -696,14 +729,16 @@ impl HistoryCell for StreamingAgentTailCell {
     fn display_hyperlink_lines(&self, _width: u16) -> Vec<HyperlinkLine> {
         // Tail lines are already rendered at the controller's current stream width.
         // Re-wrapping them here can split table borders and produce malformed in-flight rows.
-        normalize_whitespace_only_hyperlink_lines(prefix_hyperlink_lines(
-            self.lines.clone(),
-            if self.is_first_line {
-                "• ".dim()
-            } else {
-                "  ".into()
-            },
-            "  ".into(),
+        style_assistant_message_lines(normalize_whitespace_only_hyperlink_lines(
+            prefix_hyperlink_lines(
+                self.lines.clone(),
+                if self.is_first_line {
+                    "• ".dim()
+                } else {
+                    "  ".into()
+                },
+                "  ".into(),
+            ),
         ))
     }
 

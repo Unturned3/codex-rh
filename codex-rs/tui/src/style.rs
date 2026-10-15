@@ -61,17 +61,27 @@ pub fn user_message_style() -> Style {
     user_message_style_for(default_bg())
 }
 
-/// Submitted prompts use a lighter fill than the editable composer in either theme.
+/// Personal transcript palette: submitted prompts are light blue.
 pub(crate) fn history_prompt_style() -> Style {
-    let Some(background) = default_bg() else {
+    message_surface_style((220, 238, 255))
+}
+
+/// Personal transcript palette: assistant messages are light gray.
+pub(crate) fn assistant_message_style() -> Style {
+    message_surface_style((238, 238, 238))
+}
+
+fn message_surface_style(background: (u8, u8, u8)) -> Style {
+    if !matches!(
+        effective_stdout_color_level(),
+        StdoutColorLevel::TrueColor | StdoutColorLevel::Ansi256
+    ) {
         return Style::default();
-    };
-    let (foreground, alpha) = if is_light(background) {
-        ((0, 0, 0), 0.02)
-    } else {
-        ((255, 255, 255), 0.16)
-    };
-    Style::default().bg(best_color(blend(foreground, background, alpha)))
+    }
+    // An explicit dark foreground also makes the light surfaces usable in dark terminals.
+    Style::default()
+        .fg(best_color((32, 32, 32)))
+        .bg(best_color(background))
 }
 
 pub fn proposed_plan_style() -> Style {

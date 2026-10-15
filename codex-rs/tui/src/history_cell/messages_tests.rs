@@ -4,6 +4,106 @@ use assert_matches::assert_matches;
 use pretty_assertions::assert_eq;
 
 #[test]
+fn personal_message_surfaces_cover_streaming_finalized_and_resized_messages() {
+    for (fg, bg) in [
+        ((20, 20, 20), (255, 255, 255)),
+        ((240, 240, 240), (0, 0, 0)),
+    ] {
+        crate::terminal_palette::with_test_default_colors(
+            crate::terminal_probe::DefaultColors { fg, bg },
+            || {
+                let user = new_user_prompt(
+                    "A long user message with a URL https://example.test/a/b/c and more words"
+                        .into(),
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new(),
+                );
+                let markdown = "An **assistant** response with [a link](https://example.test).\n\nSecond paragraph.";
+                let finalized = AgentMarkdownCell::new(markdown.into(), Path::new("."));
+                for width in [60, 20, 60] {
+                    let blue = crate::terminal_palette::rgb_color((220, 238, 255));
+                    let gray = crate::terminal_palette::rgb_color((238, 238, 238));
+                    let user_lines = user.display_hyperlink_lines(width);
+                    assert!(!user_lines.is_empty());
+                    assert!(
+                        user_lines
+                            .iter()
+                            .all(|line| line.line.style.bg == Some(blue))
+                    );
+
+                    let lines = crate::markdown::render_markdown_agent_with_list_spacing(
+                        markdown,
+                        Some(usize::from(width - 2)),
+                        Some(Path::new(".")),
+                        None,
+                        crate::markdown_render::ListSpacing::AfterMultiline,
+                    );
+                    let streaming = AgentMessageCell::new_hyperlink_lines(lines.clone(), true);
+                    let tail = StreamingAgentTailCell::new(lines, true);
+                    for cell in [&streaming as &dyn HistoryCell, &tail, &finalized] {
+                        let display = cell.display_hyperlink_lines(width);
+                        assert!(!display.is_empty());
+                        assert!(display.iter().all(|line| line.line.style.bg == Some(gray)));
+                        assert!(
+                            display
+                                .iter()
+                                .flat_map(|line| &line.line.spans)
+                                .all(|span| {
+                                    span.style.bg == Some(gray) && span.style.fg.is_some()
+                                })
+                        );
+                        assert_eq!(display, cell.transcript_hyperlink_lines(width));
+                        assert!(cell.raw_lines().iter().all(|line| line.style.bg.is_none()));
+                    }
+                    assert!(
+                        finalized
+                            .retained_hyperlink_lines(width, false)
+                            .iter()
+                            .all(|line| { line.line.style.bg == Some(gray) })
+                    );
+                }
+            },
+        );
+    }
+}
+
+#[test]
+fn personal_message_surfaces_preserve_rich_text_and_link_metadata() {
+    crate::terminal_palette::with_test_default_colors(
+        crate::terminal_probe::DefaultColors {
+            fg: (255, 255, 255),
+            bg: (0, 0, 0),
+        },
+        || {
+            let mut line = HyperlinkLine::new(Line::default());
+            line.push_span(
+                "bold link".bold().underlined(),
+                Some("https://example.test"),
+            );
+            line.push_span(
+                " code".fg(crate::terminal_palette::rgb_color((255, 255, 255))),
+                None,
+            );
+            let links = line.hyperlinks.clone();
+            let styled = style_assistant_message_lines(vec![line]);
+            assert_eq!(styled[0].hyperlinks, links);
+            assert_eq!(styled[0].line.to_string(), "bold link code");
+            assert!(
+                styled[0].line.spans[0]
+                    .style
+                    .add_modifier
+                    .contains(Modifier::BOLD | Modifier::UNDERLINED)
+            );
+            assert_ne!(
+                styled[0].line.spans[1].style.fg,
+                Some(crate::terminal_palette::rgb_color((255, 255, 255)))
+            );
+        },
+    );
+}
+
+#[test]
 fn user_prompt_urls_keep_destinations_across_widths() {
     let url = "https://example.test/terminal-link-wrapping/solid-octants";
     let placeholder = "[Image #1]";
