@@ -1,3 +1,14 @@
+## codex-rh: personal Codex CLI
+
+User messages have a light-blue background; assistant responses have a light-gray
+background. Download this customized Linux x86_64 build from
+[Releases](https://github.com/Unturned3/codex-rh/releases) and follow the
+[installation and maintenance guide](docs/personal-fork.md).
+
+The upstream quickstart below installs the official Codex distribution.
+
+---
+
 <p align="center"><strong>Codex CLI</strong> is a coding agent from OpenAI that runs locally on your computer.
 <p align="center">
   <img src="https://github.com/openai/codex/blob/main/.github/codex-cli-splash.png" alt="Codex CLI splash" width="80%" />
