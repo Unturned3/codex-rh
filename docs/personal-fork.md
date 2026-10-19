@@ -11,9 +11,10 @@ styling. This changes the interactive TUI, not `codex exec` output.
 
 ## GitHub setup
 
-The intended public repository is `unturned3/codex-rh`, with `rh` as its default
-branch. Once the repository is created, keep `https://github.com/openai/codex.git`
-as the `upstream` remote and `https://github.com/unturned3/codex-rh.git` as `origin`.
+The public fork is [Unturned3/codex-rh](https://github.com/Unturned3/codex-rh),
+with `rh` as the development branch. The `upstream` remote points to
+`https://github.com/openai/codex.git`; `origin` points to
+`https://github.com/Unturned3/codex-rh.git`.
 
 Authenticate the GitHub CLI locally with
 `gh auth login --hostname github.com --scopes repo,workflow`
