@@ -2,6 +2,7 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+export CODEX_REPO_ROOT="$repo_root"
 target="${TARGET:-x86_64-unknown-linux-musl}"
 if [[ "$target" != x86_64-unknown-linux-musl ]]; then
   echo "This build currently supports x86_64-unknown-linux-musl only." >&2

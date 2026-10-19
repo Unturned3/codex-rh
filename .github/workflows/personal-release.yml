@@ -9,6 +9,9 @@ on:
 permissions:
   contents: read
 
+env:
+  CODEX_REPO_ROOT: ${{ github.workspace }}
+
 concurrency:
   group: personal-codex-${{ github.ref }}
   cancel-in-progress: ${{ github.ref_type != 'tag' }}
