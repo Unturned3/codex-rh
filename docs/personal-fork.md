@@ -33,15 +33,16 @@ Pushes to `rh` and manual runs build Linux x86_64 musl archives. The workflow
 reads the upstream Rust toolchain pin, verifies upstream V8 downloads, runs
 message rendering and scrollback tests, and builds an optimized CLI. LTO is
 disabled and compilation is limited to two jobs to reduce hosted-runner memory
-pressure. Cold builds may be substantial; a successful hosted run is required
-before treating this workflow as verified.
+pressure. The first verified release, `personal-v1`, took about 106 minutes for
+the cold build/test/package step on a standard hosted runner. Its published
+checksums and installation were also verified.
 
 Download the archive from the workflow run's artifacts. To publish a permanent
 GitHub Release after a successful branch build:
 
 ```bash
-git tag -a personal-v1 -m 'Personal Codex release 1'
-git push origin personal-v1
+git tag -a personal-v2 -m 'Personal Codex release 2'
+git push origin personal-v2
 ```
 
 Use a new `personal-v*` tag for each release. These tags deliberately do not match
