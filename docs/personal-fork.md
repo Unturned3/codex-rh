@@ -1,6 +1,6 @@
 # Personal Codex
 
-The `personal` branch carries two independent changes: transcript colors and
+The `rh` branch carries two independent changes: transcript colors and
 the personal build/release workflow. User messages use `#DCEEFF`; assistant
 messages use `#EEEEEE`, with dark foregrounds. The palette lives in
 `codex-rs/tui/src/style.rs`. Assistant styling is confined to message cells in
@@ -11,10 +11,9 @@ styling. This changes the interactive TUI, not `codex exec` output.
 
 ## GitHub setup
 
-Use a personal repository with `personal` as its default branch. Keep
-`https://github.com/openai/codex.git` as the `upstream` remote and your repository
-as `origin`. A public GitHub fork or a separate private repository can both carry
-this branch and its upstream history.
+The intended public repository is `unturned3/codex-rh`, with `rh` as its default
+branch. Once the repository is created, keep `https://github.com/openai/codex.git`
+as the `upstream` remote and `https://github.com/unturned3/codex-rh.git` as `origin`.
 
 Authenticate the GitHub CLI locally with
 `gh auth login --hostname github.com --scopes repo,workflow`
@@ -29,7 +28,7 @@ Actions usage/billing settings must allow the build to run.
 
 ## Builds and releases
 
-Pushes to `personal` and manual runs build Linux x86_64 musl archives. The workflow
+Pushes to `rh` and manual runs build Linux x86_64 musl archives. The workflow
 reads the upstream Rust toolchain pin, verifies upstream V8 downloads, runs
 message rendering and scrollback tests, and builds an optimized CLI. LTO is
 disabled and compilation is limited to two jobs to reduce hosted-runner memory
@@ -70,15 +69,15 @@ needed. The CLI uses your existing Codex configuration and authentication.
 
 ## Updating from upstream
 
-Keep each customization as a separate commit and rebase onto a selected upstream
-release tag. Preserve a backup branch before rewriting the personal branch:
+Keep each customization as a separate commit and rebase onto upstream `main`.
+Preserve a backup branch before rewriting `rh`:
 
 ```bash
-git fetch upstream --tags
-git switch personal
-git branch backup/personal-before-update
-git rebase <chosen-upstream-release-tag>
-git push --force-with-lease origin personal
+git fetch upstream main --tags
+git switch rh
+git branch backup/rh-before-update
+git rebase upstream/main
+git push --force-with-lease origin rh
 ```
 
 Choose a fresh backup branch name each time. Resolve any conflicts, inspect the

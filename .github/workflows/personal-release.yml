@@ -2,7 +2,7 @@ name: Personal Codex
 
 on:
   push:
-    branches: [personal]
+    branches: [rh]
     tags: ['personal-v*']
   workflow_dispatch:
 
@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   build:
-    if: github.repository != 'openai/codex'
+    if: github.repository == 'unturned3/codex-rh'
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     env:
