@@ -106,9 +106,12 @@ jobs:
           Includes the CLI, code-mode host, bubblewrap, and ripgrep.
           Voice runtime is not bundled.
 
-          Download the archive, install.sh, and SHA256SUMS, then run sha256sum --check SHA256SUMS.
-          Extract the whole archive and keep its directories together.
-          Run bin/codex from the extracted package, or run bash install.sh /path/to/extracted-package.
+          Install or upgrade pcodex using the current installer:
+          curl -fsSL https://raw.githubusercontent.com/Unturned3/codex-rh/rh/scripts/personal-codex/install.sh | bash
+
+          Run pcodex (or ~/.local/bin/pcodex). Re-run the same installer to upgrade.
+          For a specific release, set PCODEX_VERSION=${RELEASE_TAG} on the bash side of the pipe.
+          The packaged executable remains bin/codex; keep the entire package together.
           EOF
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release upload "$RELEASE_TAG" dist/* --clobber

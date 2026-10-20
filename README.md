@@ -1,8 +1,14 @@
 ## codex-rh: personal Codex CLI
 
 User messages have a light-blue background; assistant responses have a light-gray
-background. Download this customized Linux x86_64 build from
-[Releases](https://github.com/Unturned3/codex-rh/releases) and follow the
+background. Install or upgrade **pcodex** on Linux x86_64:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Unturned3/codex-rh/rh/scripts/personal-codex/install.sh | bash
+```
+
+Run `pcodex` (or `~/.local/bin/pcodex`). See
+[Releases](https://github.com/Unturned3/codex-rh/releases) and the
 [installation and maintenance guide](docs/personal-fork.md).
 
 The upstream quickstart below installs the official Codex distribution.
